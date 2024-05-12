@@ -26,7 +26,7 @@ from astropy.cosmology import (  # noqa
 
 from .. import __version__
 from .._internals import _cache, _framework
-from config import Mydouble
+from ..config import Mydouble
 
 @deprecation.deprecated(
     deprecated_in="3.1.3",
@@ -93,7 +93,7 @@ class Cosmology(_framework.Framework):
                 "cosmo_model must be an instance of astropy.cosmology.FLRW"
             )
         else:
-            return Mydouble(val)
+            return val
 
     @_cache.parameter("param")
     def cosmo_params(self, val):
@@ -111,7 +111,7 @@ class Cosmology(_framework.Framework):
 
         :type: dict
         """
-        return Mydouble(val)
+        return val
 
     # ===========================================================================
     # DERIVED PROPERTIES AND FUNCTIONS

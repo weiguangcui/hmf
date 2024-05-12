@@ -13,7 +13,7 @@ from copy import deepcopy
 from scipy.interpolate import InterpolatedUnivariateSpline as spline
 
 from .._internals._framework import Component, pluggable
-from config import Mydouble
+from ..config import Mydouble
 
 try:
     import camb

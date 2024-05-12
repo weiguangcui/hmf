@@ -13,7 +13,7 @@ from typing import Optional
 
 from .._internals import _framework
 from ..cosmology import Cosmology
-from config import Mydouble
+from ..config import Mydouble
 
 
 __all__ = [

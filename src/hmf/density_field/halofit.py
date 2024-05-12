@@ -15,7 +15,7 @@ from scipy.optimize import minimize
 from typing import Tuple
 
 from ..cosmology.cosmo import Cosmology as csm
-from config import Mydouble
+from ..config import Mydouble
 
 def _get_spec(
     k: np.ndarray, delta_k: np.ndarray, sigma_8=None

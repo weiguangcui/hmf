@@ -20,7 +20,7 @@ from ..halos.mass_definitions import MassDefinition as md
 from ..halos.mass_definitions import SOGeneric, SOMean
 from . import fitting_functions as ff
 from .integrate_hmf import hmf_integral_gtm as int_gtm
-from config import Mydouble
+from ..config import Mydouble
 
 
 class MassFunction(transfer.Transfer):

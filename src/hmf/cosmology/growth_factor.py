@@ -16,7 +16,7 @@ from typing import Union
 from .._internals._framework import Component as Cmpt
 from .._internals._framework import pluggable
 from .._internals._utils import inherit_docstrings as _inherit
-from config import Mydouble
+from ..config import Mydouble
 
 try:
     import camb

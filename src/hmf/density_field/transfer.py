@@ -15,7 +15,7 @@ from ..density_field import filters
 from ..density_field import transfer_models as tm
 from .halofit import halofit as _hfit
 from .transfer_models import HAVE_CAMB
-from config import Mydouble
+from ..config import Mydouble
 
 class Transfer(cosmo.Cosmology):
     """

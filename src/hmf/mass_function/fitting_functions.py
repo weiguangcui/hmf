@@ -15,7 +15,8 @@ from typing import Union
 from .._internals import _framework
 from ..cosmology import cosmo as csm
 from ..halos import mass_definitions as md
-from config import Mydouble
+from ..config import Mydouble
+
 
 class SimDetails:
     """

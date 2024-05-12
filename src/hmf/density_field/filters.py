@@ -7,7 +7,7 @@ import warnings
 from scipy.interpolate import InterpolatedUnivariateSpline as _spline
 
 from .._internals import _framework, _utils
-from config import Mydouble
+from ..config import Mydouble
 
 @_framework.pluggable
 class Filter(_framework.Component):

@@ -5,7 +5,7 @@ A supporting module that provides a routine to integrate the differential hmf in
 import numpy as np
 import scipy.integrate as intg
 from scipy.interpolate import InterpolatedUnivariateSpline as _spline
-from config import Mydouble
+from ..config import Mydouble
 
 
 class NaNException(Exception):
