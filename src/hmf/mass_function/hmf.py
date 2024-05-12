@@ -20,6 +20,7 @@ from ..halos.mass_definitions import MassDefinition as md
 from ..halos.mass_definitions import SOGeneric, SOMean
 from . import fitting_functions as ff
 from .integrate_hmf import hmf_integral_gtm as int_gtm
+from config import Mydouble
 
 
 class MassFunction(transfer.Transfer):
@@ -114,12 +115,12 @@ class MassFunction(transfer.Transfer):
 
         # Set all given parameters.
         self.hmf_model = hmf_model
-        self.Mmin = Mmin
-        self.Mmax = Mmax
-        self.dlog10m = dlog10m
+        self.Mmin = Mydouble(Mmin)
+        self.Mmax = Mydouble(Mmax)
+        self.dlog10m = Mydouble(dlog10m)
         self.mdef_model = mdef_model
         self.mdef_params = mdef_params or {}
-        self.delta_c = delta_c
+        self.delta_c = Mydouble(delta_c)
         self.hmf_params = hmf_params or {}
         self.filter_model = filter_model
         self.filter_params = filter_params or {}
@@ -155,7 +156,7 @@ class MassFunction(transfer.Transfer):
         return val
 
     @parameter("res")
-    def dlog10m(self, val) -> float:
+    def dlog10m(self, val) -> Mydouble:
         """
         log10 interval between mass bins
 
@@ -197,7 +198,7 @@ class MassFunction(transfer.Transfer):
         :type: float
         """
         try:
-            val = float(val)
+            val = Mydouble(val)
         except ValueError:
             raise ValueError("delta_c must be a number: ", val)
 
@@ -345,7 +346,7 @@ class MassFunction(transfer.Transfer):
     @cached_quantity
     def m(self):
         """Halo masses (defined via ``mdef``)."""
-        return 10 ** np.arange(self.Mmin, self.Mmax, self.dlog10m)
+        return 10 ** np.arange(self.Mmin, self.Mmax, self.dlog10m, dtype=Mydouble)
 
     @cached_quantity
     def _unn_sigma0(self):

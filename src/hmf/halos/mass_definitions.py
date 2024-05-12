@@ -13,6 +13,8 @@ from typing import Optional
 
 from .._internals import _framework
 from ..cosmology import Cosmology
+from config import Mydouble
+
 
 __all__ = [
     "FOF",
@@ -31,12 +33,14 @@ class MassDefinition(_framework.Component):
 
     @staticmethod
     def critical_density(z=0, cosmo=Planck15):
+        z = Mydouble(z)
         """Get the critical density of the Universe at redshift z, [h^2 Msun/Mpc^3]."""
-        return (cosmo.critical_density(z) / cosmo.h**2).to(u.Msun / u.Mpc**3).value
+        return Mydouble((cosmo.critical_density(z) / cosmo.h**2).to(u.Msun / u.Mpc**3).value)
 
     @classmethod
     def mean_density(cls, z=0, cosmo=Planck15):
         """Get the mean density of the Universe at redshift z, [h^2 Msun / Mpc^3]."""
+        z = Mydouble(z)
         return cosmo.Om(z) * cls.critical_density(z, cosmo)
 
     def halo_density(self, z=0, cosmo=Planck15):
@@ -53,9 +57,11 @@ class MassDefinition(_framework.Component):
         return None
 
     def halo_overdensity_mean(self, z=0, cosmo=Planck15):
+        z = Mydouble(z)
         return self.halo_density(z, cosmo) / self.mean_density(z, cosmo)
 
     def halo_overdensity_crit(self, z=0, cosmo=Planck15):
+        z = Mydouble(z)
         return self.halo_density(z, cosmo) / self.critical_density(z, cosmo)
 
     def m_to_r(self, m, z=0, cosmo=Planck15):
@@ -72,6 +78,8 @@ class MassDefinition(_framework.Component):
         -----
         Computed as :math:`\left(\frac{3m}{4\pi \rho_{\rm halo}\right)`.
         """
+        m = Mydouble(m)
+        z = Mydouble(z)
         try:
             return (3 * m / (4 * np.pi * self.halo_density(z, cosmo))) ** (1.0 / 3.0)
         except AttributeError:
@@ -93,6 +101,8 @@ class MassDefinition(_framework.Component):
         -----
         Computed as :math:`\frac{4\pi r^3}{3} \rho_{\rm halo}`.
         """
+        r = Mydouble(r)
+        z = Mydouble(z)
         try:
             return 4 * np.pi * r**3 * self.halo_density(z, cosmo) / 3
         except AttributeError:
@@ -101,7 +111,8 @@ class MassDefinition(_framework.Component):
             )
 
     def _duffy_concentration(self, m, z=0):
-        a, b, c, ms = 6.71, -0.091, 0.44, 2e12
+        a, b, c, ms = Mydouble([6.71, -0.091, 0.44, 2e12])
+        m = Mydouble(m)
         return a / (1 + z) ** c * (m / ms) ** b
 
     def change_definition(
@@ -144,13 +155,15 @@ class MassDefinition(_framework.Component):
             raise ValueError(
                 "If both m and c are arrays, they must be of the same length"
             )
+
+        z = Mydouble(z)
         if c is not None and np.isscalar(c) and not np.isscalar(m):
             c = np.ones_like(m) * c
         if c is not None and np.isscalar(m) and not np.isscalar(c):
             m = np.ones_like(m) * m
         if c is not None:
-            c = np.atleast_1d(c)
-        m = np.atleast_1d(m)
+            c = Mydouble(np.atleast_1d(c))
+        m = Mydouble(np.atleast_1d(m))
 
         if profile is None:
             try:
@@ -270,7 +283,8 @@ class SOVirial(SphericalOverdensity):
 
     def halo_density(self, z=0, cosmo=Planck15):
         """The density of haloes under this definition."""
-        x = cosmo.Om(z) - 1
+        z = Mydouble(z)
+        x = Mydouble(cosmo.Om(z) - 1)
         overdensity = 18 * np.pi**2 + 82 * x - 39 * x**2
         return overdensity * self.mean_density(z, cosmo) / cosmo.Om(z)
 
@@ -302,7 +316,8 @@ class FOF(MassDefinition):
            Numerical Simulations.” The Astrophysical Journal 550, no. 2 (April 2001):
            L129–32. https://doi.org/10.1086/319644.
         """
-        overdensity = 9 / (2 * np.pi * self.params["linking_length"] ** 3)
+        z = Mydouble(z)
+        overdensity = 9 / (2 * np.pi * Mydouble(self.params["linking_length"]) ** 3)
         return overdensity * self.mean_density(z, cosmo)
 
     @property
@@ -356,10 +371,12 @@ def _find_new_concentration(rho_s, halo_density, h=None, x_guess=5.0):
     # provide lower and upper limits for the root finder. To balance stability and
     # performance, we do so iteratively: if there is no result within relatively
     # aggressive limits, we try again with more conservative limits.
+    rho_s = Mydouble(rho_s)
+    halo_density = Mydouble(halo_density)
     args = rho_s, halo_density
     x = None
     i = 0
-    XDELTA_GUESS_FACTORS = [5.0, 10.0, 20.0, 100.0, 10000.0]
+    XDELTA_GUESS_FACTORS = Mydouble([5.0, 10.0, 20.0, 100.0, 10000.0])
 
     if h is None:
 

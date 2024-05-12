@@ -15,11 +15,11 @@ from scipy.optimize import minimize
 from typing import Tuple
 
 from ..cosmology.cosmo import Cosmology as csm
-
+from config import Mydouble
 
 def _get_spec(
     k: np.ndarray, delta_k: np.ndarray, sigma_8=None
-) -> Tuple[float, float, float]:
+) -> Tuple[Mydouble, Mydouble, Mydouble]:
     """
     Calculate nonlinear wavenumber, effective spectral index and curvature
     of the power spectrum.
@@ -46,7 +46,7 @@ def _get_spec(
 
     # Initialize sigma spline
     def get_log_sigma2(lnr):
-        R = np.exp(lnr)
+        R = np.exp(lnr, dtype=Mydouble)
         integrand = delta_k * np.exp(-((k * R) ** 2))
         return np.log(_simps(integrand, np.log(k)))
 
@@ -63,10 +63,12 @@ def _get_spec(
             f"Continuing with best-fit non-linear scale: r_nl={np.exp(res.x)}, with log_sigma^2 = {res.fun}"
         )
 
-    rnl = np.exp(res.x)
+    k = Mydouble(k)
+    delta_k = Mydouble(delta_k)
+    rnl = np.exp(res.x, dtype=Mydouble)
     knl = 1 / rnl
 
-    lnr = np.linspace(np.log(0.75 * rnl), np.log(1.25 * rnl), 20)
+    lnr = np.linspace(np.log(0.75 * rnl), np.log(1.25 * rnl), 20, dtype=Mydouble)
     lnsig = [get_log_sigma2(r) for r in lnr]
     sig_of_r = _spline(lnr, lnsig, k=5)
     dev1, dev2 = sig_of_r.derivatives(np.log(rnl))[1:3]
@@ -111,6 +113,10 @@ def halofit(k, delta_k, sigma_8=None, z=0, cosmo=None, takahashi=True):
     if cosmo is None:
         cosmo = csm()
 
+    k = Mydouble(k)
+    delta_k = Mydouble(delta_k)
+    z = Mydouble(z)
+
     # Get physical parameters
     rknl, neff, rncur = _get_spec(k, delta_k)
 
@@ -124,7 +130,10 @@ def halofit(k, delta_k, sigma_8=None, z=0, cosmo=None, takahashi=True):
     omegavz = cosmo.Ode(z)
 
     w = cosmo.w(z)
-    fnu = cosmo.Onu0 / cosmo.Om0
+    fnu = Mydouble(cosmo.Onu0 / cosmo.Om0)
+
+    if neff.dtype != Mydouble or omegamz.dtype != Mydouble: # check point
+        raise Warning("All parameters must be Mydouble, neff.dtype = %s, omegamz.dtype = %s" % (neff.dtype, omegamz.dtype))
 
     if takahashi:
         a = 10 ** (
@@ -192,7 +201,7 @@ def halofit(k, delta_k, sigma_8=None, z=0, cosmo=None, takahashi=True):
             f2 = frac * f2b + (1 - frac) * f2a
             f3 = frac * f3b + (1 - frac) * f3a
     else:
-        f1 = f2 = f3 = 1.0
+        f1 = f2 = f3 = Mydouble(1.0)
 
     y = k / rknl
 

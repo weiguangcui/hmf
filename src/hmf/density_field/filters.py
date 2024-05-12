@@ -7,7 +7,7 @@ import warnings
 from scipy.interpolate import InterpolatedUnivariateSpline as _spline
 
 from .._internals import _framework, _utils
-
+from config import Mydouble
 
 @_framework.pluggable
 class Filter(_framework.Component):
@@ -57,8 +57,8 @@ class Filter(_framework.Component):
     """
 
     def __init__(self, k, power, **model_parameters):
-        self.k = k
-        self.power = power
+        self.k = Mydouble(k)
+        self.power = Mydouble(power)
 
         super().__init__(**model_parameters)
 
@@ -179,6 +179,7 @@ class Filter(_framework.Component):
         .. math:: \frac{d\ln \sigma^2}{d\ln R} = \frac{1}{\pi^2\sigma^2} \int_0^\infty
                   W(kR) \frac{dW(kR)}{d\ln(kR)} P(k)k^2 dk
         """
+        r = Mydouble(r)
         dlnk = np.log(self.k[1] / self.k[0])
         s = self.sigma(r)
         rk = np.outer(r, self.k)
@@ -200,7 +201,7 @@ class Filter(_framework.Component):
         r : array_like
             Radii.
         """
-        return 1.0 / 3.0
+        return Mydouble(1.0 / 3.0)
 
     def dlnss_dlnm(self, r):
         r"""
@@ -214,6 +215,7 @@ class Filter(_framework.Component):
         r : array_like
             Radii.
         """
+        r = Mydouble(r)
         return self.dlnss_dlnr(r) * self.dlnr_dlnm(r)
 
     def sigma(self, r, order=0, rk=None):
@@ -244,6 +246,7 @@ class Filter(_framework.Component):
         .. math:: \sigma^2_n(R) = \frac{1}{2\pi^2} \int_0^\infty dk\ k^{2(1+n)}
                   P(k) W^2(kR)
         """
+        r = Mydouble(r)
         if rk is None:
             rk = np.outer(r, self.k)
 
@@ -267,7 +270,7 @@ class Filter(_framework.Component):
         delta_c : float, optional
             Critical overdensity for collapse.
         """
-        return (delta_c / self.sigma(r)) ** 2
+        return (Mydouble(delta_c) / self.sigma(r)) ** 2
 
 
 @_utils.inherit_docstrings
@@ -307,10 +310,10 @@ class TopHat(Filter):
         return np.where(kr > 1.4e-6, (3 / kr**3) * (np.sin(kr) - kr * np.cos(kr)), 1)
 
     def mass_to_radius(self, m, rho_mean):
-        return (3.0 * m / (4.0 * np.pi * rho_mean)) ** (1.0 / 3.0)
+        return Mydouble((3.0 * m / (4.0 * np.pi * rho_mean)) ** (1.0 / 3.0))
 
     def radius_to_mass(self, r, rho_mean):
-        return 4 * np.pi * r**3 * rho_mean / 3
+        return Mydouble(4 * np.pi * r**3 * rho_mean / 3)
 
     def dw_dlnkr(self, kr):
         return np.where(
@@ -350,19 +353,19 @@ class Gaussian(Filter):
     """
 
     def real_space(self, R, r):
-        return np.exp(-(r**2) / 2 / R**2) / (2 * np.pi) ** 1.5 / R**3
+        return Mydouble(np.exp(-(r**2) / 2 / R**2) / (2 * np.pi) ** 1.5 / R**3)
 
     def k_space(self, kr):
-        return np.exp(-(kr**2) / 2.0)
+        return Mydouble(np.exp(-(kr**2) / 2.0))
 
     def mass_to_radius(self, m, rho_mean):
-        return (m / rho_mean) ** (1.0 / 3.0) / np.sqrt(2 * np.pi)
+        return Mydouble((m / rho_mean) ** (1.0 / 3.0) / np.sqrt(2 * np.pi))
 
     def radius_to_mass(self, r, rho_mean):
-        return (2 * np.pi) ** 1.5 * r**3 * rho_mean
+        return Mydouble((2 * np.pi) ** 1.5 * r**3 * rho_mean)
 
     def dw_dlnkr(self, kr):
-        return -(kr**2) * self.k_space(kr)
+        return Mydouble(-(kr**2) * self.k_space(kr))
 
 
 @_utils.inherit_docstrings
@@ -407,23 +410,24 @@ class SharpK(Filter):
         return np.where(kr == 1, 0.5, a)
 
     def real_space(self, R, r):
-        return (np.sin(r / R) - (r / R) * np.cos(r / R)) / (2 * np.pi**2 * r**3)
+        return Mydouble((np.sin(r / R) - (r / R) * np.cos(r / R)) / (2 * np.pi**2 * r**3))
 
     def dw_dlnkr(self, kr):
         return np.where(kr == 1, 1.0, 0.0)
 
     def dlnss_dlnr(self, r):
+        r = Mydouble(r)
         sigma = self.sigma(r)
         power = _spline(self.k, self.power)(1 / r)
         return -power / (2 * np.pi**2 * sigma**2 * r**3)
 
     def mass_to_radius(self, m, rho_mean):
-        return (1.0 / self.params["c"]) * (3.0 * m / (4.0 * np.pi * rho_mean)) ** (
+        return Mydouble((1.0 / self.params["c"]) * (3.0 * m / (4.0 * np.pi * rho_mean)) ** (
             1.0 / 3.0
-        )
+        ))
 
     def radius_to_mass(self, r, rho_mean):
-        return 4 * np.pi * (self.params["c"] * r) ** 3 * rho_mean / 3
+        return Mydouble(4 * np.pi * (self.params["c"] * r) ** 3 * rho_mean / 3)
 
     def sigma(self, r, order=0):
         if not isinstance(r, collections.abc.Iterable):
@@ -434,13 +438,14 @@ class SharpK(Filter):
 
         # # Need to re-define this because the integral needs to go exactly kr=1
         # # or else the function 'jitters'
-        sigma = np.zeros(len(r))
+        r = Mydouble(r)
+        sigma = np.zeros(len(r), dtype=Mydouble)
         power = _spline(self.k, self.power)
         for i, rr in enumerate(r):
             k = np.logspace(
                 np.log10(self.k[0]),
                 min(np.log10(self.k.max()), np.log10(1.0 / rr)),
-                max(100, len(self.k) - i),
+                max(100, len(self.k) - i), dtype=Mydouble,
             )
 
             p = power(k)
@@ -472,6 +477,8 @@ class SharpKEllipsoid(SharpK):
 
         Equation A6. in Schneider et al. 2013
         """
+        g = Mydouble(g)
+        v = Mydouble(v)
         top = 3 * (1 - g**2) + (1.1 - 0.9 * g**4) * np.exp(
             -g * (1 - g**2) * (g * v / 2) ** 2
         )
@@ -482,25 +489,25 @@ class SharpKEllipsoid(SharpK):
         """
         The average ellipticity of a patch as a function of peak tensor
         """
-        return 1 / np.sqrt(5 * xm**2 + 6)
+        return Mydouble(1 / np.sqrt(5 * xm**2 + 6))
 
     def pm(self, xm):
         """
         The average prolateness of a patch as a function of peak tensor
         """
-        return 30.0 / (5 * xm**2 + 6) ** 2
+        return Mydouble(30.0 / (5 * xm**2 + 6) ** 2)
 
     def a3a1(self, e, p):
         """
         The short:long axis ratio of an ellipsoid given its ellipticity and prolateness
         """
-        return np.sqrt((1 - 3 * e + p) / (1 + 3 * e + p))
+        return Mydouble(np.sqrt((1 - 3 * e + p) / (1 + 3 * e + p)))
 
     def a3a2(self, e, p):
         """
         The short:medium axis ratio of an ellipsoid given its ellipticity/prolateness
         """
-        return np.sqrt((1 - 2 * p) / (1 + 3 * e + p))
+        return Mydouble(np.sqrt((1 - 2 * p) / (1 + 3 * e + p)))
 
     def gamma(self, r):
         """Bardeen et al. 1986 equation 6.17."""
@@ -510,7 +517,7 @@ class SharpKEllipsoid(SharpK):
         return sig_1**2 / (sig_0 * sig_2)
 
     def xi(self, pm, em):
-        return ((1 + 4 * pm) ** 2 / (1 - 3 * em + pm) / (1 - 2 * pm)) ** (1.0 / 6.0)
+        return Mydouble(((1 + 4 * pm) ** 2 / (1 - 3 * em + pm) / (1 - 2 * pm)) ** (1.0 / 6.0))
 
     def a3(self, r):
         g = self.gamma(r)
@@ -520,7 +527,7 @@ class SharpKEllipsoid(SharpK):
         return r / self.xi(pm, em)
 
     def r_a3(self, rmin, rmax):
-        r = np.logspace(np.log(rmin), np.log(rmax), 200, base=np.e)
+        r = np.logspace(np.log(rmin), np.log(rmax), 200, base=np.e, dtype=Mydouble)
         a3 = self.a3(r)
         return _spline(a3, r)
 

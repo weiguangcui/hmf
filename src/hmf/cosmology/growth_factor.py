@@ -16,6 +16,7 @@ from typing import Union
 from .._internals._framework import Component as Cmpt
 from .._internals._framework import pluggable
 from .._internals._utils import inherit_docstrings as _inherit
+from config import Mydouble
 
 try:
     import camb
@@ -73,18 +74,18 @@ class GrowthFactor(_GrowthFactor):
 
     @cached_property
     def _lna(self):
-        lna = np.arange(np.log(self.params["amin"]), 0, self.params["dlna"])
+        lna = np.arange(np.log(self.params["amin"]), 0, self.params["dlna"], dtype=Mydouble)
         if lna[-1] != 0:
             lna = np.concatenate((lna, [0]))
         return lna
 
     @cached_property
     def _zvec(self):
-        return 1.0 / np.exp(self._lna) - 1.0
+        return 1.0 / np.exp(self._lna, dtype=Mydouble) - 1.0
 
     @cached_property
     def integral(self):
-        a = np.exp(self._lna)
+        a = np.exp(self._lna, dtype=Mydouble)
         return _spline(
             a, 2.5 * self.cosmo.Om0 / (a * self.cosmo.efunc(self._zvec)) ** 3
         ).antiderivative()
@@ -103,7 +104,8 @@ class GrowthFactor(_GrowthFactor):
         dplus
             The un-normalised growth factor -- same type as ``z``.
         """
-        a_min = np.exp(self._lna).min()
+        z = Mydouble(z)
+        a_min = np.exp(self._lna, dtype=Mydouble).min()
         a = 1 / (1 + z)
 
         if np.any(z < 0):
@@ -158,7 +160,7 @@ class GrowthFactor(_GrowthFactor):
         if not inverse:
             return self.growth_factor
 
-        z = np.sort(self._zvec)[::-1]
+        z = Mydouble(np.sort(self._zvec)[::-1])
         gf = self.growth_factor(z)
         return _spline(gf, z)
 
@@ -171,7 +173,7 @@ class GrowthFactor(_GrowthFactor):
         z : float
             The redshift
         """
-        return (
+        return Mydouble(
             -1
             - self.cosmo.Om(z) / 2
             + self.cosmo.Ode(z)
@@ -228,7 +230,7 @@ class GenMFGrowth(GrowthFactor):
 
     @cached_property
     def _zvec(self):
-        return np.arange(0, self.params["zmax"], self.params["dz"])
+        return np.arange(0, self.params["zmax"], self.params["dz"], dtype=Mydouble)
 
     def _d_plus(self, z):
         """
@@ -239,11 +241,11 @@ class GenMFGrowth(GrowthFactor):
 
     def _general_case(self, w, x):
         x = np.atleast_1d(x)
-        xn_vec = np.linspace(0, x.max(), 1000)
+        xn_vec = np.linspace(0, x.max(), 1000, dtype=Mydouble)
 
         func = _spline(xn_vec, (xn_vec / (xn_vec**3 + 2)) ** 1.5)
 
-        g = np.array([func.integral(0, y) for y in x])
+        g = np.array([func.integral(0, y) for y in x], dtype=Mydouble)
         return ((x**3.0 + 2.0) ** 0.5) * (g / x**1.5)
 
     def growth_factor(self, z):
@@ -263,9 +265,9 @@ class GenMFGrowth(GrowthFactor):
         gf : array_like
             The growth factor at `z`.
         """
-        a = 1 / (1 + z)
-        w = 1 / self.cosmo.Om0 - 1.0
-        s = 1 - self.cosmo.Ok0
+        a = 1 / (1 + Mydouble(z))
+        w = Mydouble(1 / self.cosmo.Om0 - 1.0)
+        s = Mydouble(1 - self.cosmo.Ok0)
         if (s > 1 or self.cosmo.Om0 < 0 or (s != 1 and self.cosmo.Ode0 > 0)) and np.abs(
             s - 1.0
         ) > 1.0e-10:
@@ -321,7 +323,7 @@ class Carroll1992(GrowthFactor):
 
     @cached_property
     def _zvec(self):
-        return np.arange(0, self.params["zmax"], self.params["dz"])
+        return np.arange(0, self.params["zmax"], self.params["dz"], dtype=Mydouble)
 
     def _d_plus(self, z):
         """
@@ -329,7 +331,7 @@ class Carroll1992(GrowthFactor):
         of redshift. Note that the `getvec` argument is not
         used in this function.
         """
-        a = 1 / (1 + z)
+        a = 1 / (1 + Mydouble(z))
 
         om = self.cosmo.Om0 / a**3
         denom = self.cosmo.Ode0 + om
@@ -389,14 +391,14 @@ if HAVE_CAMB:
 
         @cached_property
         def _camb_transfers(self):
-            return camb.get_transfer_functions(self.p)
+            return Mydouble(camb.get_transfer_functions(self.p))
 
         @cached_property
         def _t0(self):
             """The Transfer function at z=0."""
-            return self._camb_transfers.get_redshift_evolution(1.0, 0.0, ["delta_tot"])[
+            return Mydouble(self._camb_transfers.get_redshift_evolution(1.0, 0.0, ["delta_tot"])[
                 0
-            ][0]
+            ][0])
 
         def growth_factor(self, z):
             """

@@ -15,7 +15,7 @@ from ..density_field import filters
 from ..density_field import transfer_models as tm
 from .halofit import halofit as _hfit
 from .transfer_models import HAVE_CAMB
-
+from config import Mydouble
 
 class Transfer(cosmo.Cosmology):
     """
@@ -60,14 +60,14 @@ class Transfer(cosmo.Cosmology):
         super().__init__(**kwargs)
 
         # Set all given parameters
-        self.n = n
-        self.sigma_8 = sigma_8
+        self.n = Mydouble(n)
+        self.sigma_8 = Mydouble(sigma_8)
         self.growth_params = growth_params or {}
         self.use_splined_growth = use_splined_growth
-        self.lnk_min = lnk_min
-        self.lnk_max = lnk_max
-        self.dlnk = dlnk
-        self.z = z
+        self.lnk_min = Mydouble(lnk_min)
+        self.lnk_max = Mydouble(lnk_max)
+        self.dlnk = Mydouble(dlnk)
+        self.z = Mydouble(z)
         self.transfer_model = transfer_model
         self.transfer_params = transfer_params or {}
         self.takahashi = takahashi
@@ -145,7 +145,7 @@ class Transfer(cosmo.Cosmology):
         """
         if val < 0.1 or val > 10:
             raise ValueError("sigma_8 out of bounds, %s" % val)
-        return val
+        return Mydouble(val)
 
     @parameter("param")
     def n(self, val):
@@ -158,7 +158,7 @@ class Transfer(cosmo.Cosmology):
         """
         if val < -3 or val > 4:
             raise ValueError("n out of bounds, %s" % val)
-        return val
+        return Mydouble(val)
 
     @parameter("res")
     def lnk_min(self, val):
@@ -167,7 +167,7 @@ class Transfer(cosmo.Cosmology):
 
         :type: float
         """
-        return val
+        return Mydouble(val)
 
     @parameter("res")
     def lnk_max(self, val):
@@ -176,7 +176,7 @@ class Transfer(cosmo.Cosmology):
 
         :type: float
         """
-        return val
+        return Mydouble(val)
 
     @parameter("res")
     def dlnk(self, val):
@@ -185,7 +185,7 @@ class Transfer(cosmo.Cosmology):
 
         :type: float
         """
-        return val
+        return Mydouble(val)
 
     @parameter("switch")
     def takahashi(self, val):
@@ -208,7 +208,7 @@ class Transfer(cosmo.Cosmology):
         :type: float
         """
         try:
-            val = float(val)
+            val = Mydouble(val)
         except ValueError:
             raise ValueError("z must be a number (", val, ")")
 
@@ -223,7 +223,7 @@ class Transfer(cosmo.Cosmology):
     @cached_quantity
     def k(self):
         """Wavenumbers, [h/Mpc]"""
-        return np.exp(np.arange(self.lnk_min, self.lnk_max, self.dlnk))
+        return np.exp(np.arange(self.lnk_min, self.lnk_max, self.dlnk, dtype=Mydouble))
 
     @cached_quantity
     def transfer(self):
@@ -250,7 +250,7 @@ class Transfer(cosmo.Cosmology):
     def _unn_sig8(self):
         # Always use a TopHat for sigma_8, and always use full k-range
         if self.lnk_min > -15 or self.lnk_max < 9:
-            lnk = np.arange(-8, 8, self.dlnk)
+            lnk = np.arange(-8, 8, self.dlnk, dtype=Mydouble)
             t = self.transfer.lnt(lnk)
             p = np.exp(lnk) ** self.n * np.exp(t) ** 2
             filt = filters.TopHat(np.exp(lnk), p)

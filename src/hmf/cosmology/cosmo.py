@@ -26,7 +26,7 @@ from astropy.cosmology import (  # noqa
 
 from .. import __version__
 from .._internals import _cache, _framework
-
+from config import Mydouble
 
 @deprecation.deprecated(
     deprecated_in="3.1.3",
@@ -93,7 +93,7 @@ class Cosmology(_framework.Framework):
                 "cosmo_model must be an instance of astropy.cosmology.FLRW"
             )
         else:
-            return val
+            return Mydouble(val)
 
     @_cache.parameter("param")
     def cosmo_params(self, val):
@@ -111,7 +111,7 @@ class Cosmology(_framework.Framework):
 
         :type: dict
         """
-        return val
+        return Mydouble(val)
 
     # ===========================================================================
     # DERIVED PROPERTIES AND FUNCTIONS
@@ -129,7 +129,7 @@ class Cosmology(_framework.Framework):
         """
         Mean density of universe at z=0, [Msun h^2 / Mpc**3]
         """
-        return (
+        return Mydouble(
             (self.cosmo.Om0 * self.cosmo.critical_density0 / self.cosmo.h**2)
             .to(u.Msun / u.Mpc**3)
             .value

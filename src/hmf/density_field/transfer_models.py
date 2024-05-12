@@ -13,6 +13,7 @@ from copy import deepcopy
 from scipy.interpolate import InterpolatedUnivariateSpline as spline
 
 from .._internals._framework import Component, pluggable
+from config import Mydouble
 
 try:
     import camb
@@ -99,6 +100,9 @@ class FromFile(TransferComponent):
         lnT : array_like
             Value of log(transfer)
         """
+        lnk = Mydouble(lnk)
+        lnT = Mydouble(lnT)
+
         start = 0
         for i in range(len(lnk) - 1):
             if abs((lnT[i + 1] - lnT[i]) / (lnk[i + 1] - lnk[i])) < 0.0001:
@@ -125,9 +129,9 @@ class FromFile(TransferComponent):
             The log of the transfer function at lnk.
         """
         try:
-            T = np.log(np.genfromtxt(self.params["fname"])[:, [0, 6]].T)
+            T = np.log(np.genfromtxt(self.params["fname"])[:, [0, 6]].T, dtype=Mydouble)
         except IndexError:
-            T = np.log(np.genfromtxt(self.params["fname"])[:, [0, 1]].T)
+            T = np.log(np.genfromtxt(self.params["fname"])[:, [0, 1]].T, dtype=Mydouble)
 
         if lnk[0] < T[0, 0]:
             lnkout, lnT = self._check_low_k(T[0, :], T[1, :], lnk[0])
@@ -187,7 +191,11 @@ if HAVE_CAMB:
                     WantDerivedParameters=False,
                 )
 
-                self.params["camb_params"].Transfer.high_precision = False
+                if Mydouble is np.float64 or Mydouble is np.float128: # use high precision CAMB
+                    self.params["camb_params"].set_accuracy(AccuracyBoost=3.0, lSampleBoost=3.0, lAccuracyBoost=3.0)
+                    self.params["camb_params"].Transfer.high_precision = True
+                else:
+                    self.params["camb_params"].Transfer.high_precision = False
                 self.params["camb_params"].Transfer.k_per_logint = 0
 
                 # If extrapolating with EH, use a lower value of kmax so that the
@@ -208,16 +216,16 @@ if HAVE_CAMB:
                 )
 
             self.params["camb_params"].set_cosmology(
-                H0=self.cosmo.H0.value,
-                ombh2=self.cosmo.Ob0 * self.cosmo.h**2,
-                omch2=(self.cosmo.Om0 - self.cosmo.Ob0 - self.cosmo.Onu0)
-                * self.cosmo.h**2,
-                mnu=sum(self.cosmo.m_nu.value),
+                H0=Mydouble(self.cosmo.H0.value),
+                ombh2=Mydouble(self.cosmo.Ob0 * self.cosmo.h**2),
+                omch2=Mydouble((self.cosmo.Om0 - self.cosmo.Ob0 - self.cosmo.Onu0)
+                * self.cosmo.h**2),
+                mnu=sum(Mydouble(self.cosmo.m_nu.value)),
                 neutrino_hierarchy="degenerate",
-                omk=self.cosmo.Ok0,
-                nnu=self.cosmo.Neff,
-                standard_neutrino_neff=self.cosmo.Neff,
-                TCMB=self.cosmo.Tcmb0.value,
+                omk=Mydouble(self.cosmo.Ok0),
+                nnu=Mydouble(self.cosmo.Neff),
+                standard_neutrino_neff=Mydouble(self.cosmo.Neff),
+                TCMB=Mydouble(self.cosmo.Tcmb0.value),
             )
             self.params["camb_params"].WantTransfer = True
 
@@ -248,8 +256,9 @@ if HAVE_CAMB:
                 The log of the transfer function at lnk.
             """
 
+            lnk = Mydouble(lnk)
             camb_transfers = camb.get_transfer_functions(self.params["camb_params"])
-            T = camb_transfers.get_matter_transfer_data().transfer_data
+            T = Mydouble(camb_transfers.get_matter_transfer_data().transfer_data)
             T = np.log(T[[0, 6], :, 0])
 
             if lnk[0] < T[0, 0]:
@@ -415,6 +424,7 @@ class FromArray(FromFile):
         """
         k = self.params["k"]
         T = self.params["T"]
+        lnk = Mydouble(lnk)
 
         if k is None or T is None:
             raise ValueError(
@@ -422,6 +432,9 @@ class FromArray(FromFile):
             )
         if len(k) != len(T):
             raise ValueError("k and T must have same length")
+
+        k = Mydouble(k)
+        T = Mydouble(T)
 
         if lnk[0] < np.log(k.min()):
             lnkout, lnT = self._check_low_k(np.log(k), np.log(T), lnk[0])
@@ -454,14 +467,14 @@ class EH_BAO(TransferComponent):
         """
         Port of ``TFset_parameters`` from original EH code.
         """
-        self.Obh2 = self.cosmo.Ob0 * self.cosmo.h**2
-        self.Omh2 = self.cosmo.Om0 * self.cosmo.h**2
-        self.f_baryon = self.cosmo.Ob0 / self.cosmo.Om0
+        self.Obh2 = self.cosmo.Ob0 * Mydouble(self.cosmo.h)**2
+        self.Omh2 = self.cosmo.Om0 * Mydouble(self.cosmo.h)**2
+        self.f_baryon = Mydouble(self.cosmo.Ob0) / self.cosmo.Om0
 
-        self.theta_cmb = self.cosmo.Tcmb0.value / 2.7
+        self.theta_cmb = Mydouble(self.cosmo.Tcmb0.value) / 2.7
 
-        self.z_eq = 2.5e4 * self.Omh2 * self.theta_cmb ** (-4)  # really 1+z
-        self.k_eq = 7.46e-2 * self.Omh2 * self.theta_cmb ** (-2)  # units Mpc^-1 (no h!)
+        self.z_eq = 2.5e4 * self.Omh2 * Mydouble(self.theta_cmb) ** (-4)  # really 1+z
+        self.k_eq = 7.46e-2 * self.Omh2 * Mydouble(self.theta_cmb) ** (-2)  # units Mpc^-1 (no h!)
 
         self.z_drag_b1 = 0.313 * self.Omh2**-0.419 * (1.0 + 0.607 * self.Omh2**0.674)
         self.z_drag_b2 = 0.238 * self.Omh2**0.223
@@ -473,9 +486,9 @@ class EH_BAO(TransferComponent):
         )
 
         self.r_drag = (
-            31.5 * self.Obh2 * self.theta_cmb**-4 * (1000.0 / (1 + self.z_drag))
+            31.5 * self.Obh2 * Mydouble(self.theta_cmb)**-4 * (1000.0 / (1 + self.z_drag))
         )
-        self.r_eq = 31.5 * self.Obh2 * self.theta_cmb**-4 * (1000.0 / self.z_eq)
+        self.r_eq = 31.5 * self.Obh2 * Mydouble(self.theta_cmb)**-4 * (1000.0 / self.z_eq)
 
         self.sound_horizon = (
             (2.0 / (3.0 * self.k_eq))
@@ -529,7 +542,7 @@ class EH_BAO(TransferComponent):
 
     @property
     def k_peak(self):
-        return 2.5 * np.pi * (1 + 0.217 * self.Omh2) / self.sound_horizon
+        return 2.5 * np.pi * (1 + 0.217 * Mydouble(self.Omh2)) / self.sound_horizon
 
     @property
     def sound_horizon_fit(self):
@@ -540,7 +553,7 @@ class EH_BAO(TransferComponent):
             self.cosmo.h
             * 44.5
             * np.log(9.83 / self.Omh2)
-            / np.sqrt(1 + 10 * (self.Obh2**0.75))
+            / np.sqrt(1 + 10 * (Mydouble(self.Obh2)**0.75))
         )
 
     def lnt(self, lnk):
@@ -557,6 +570,7 @@ class EH_BAO(TransferComponent):
         lnt : array_like
             The log of the transfer function at lnk.
         """
+        lnk = Mydouble(lnk)
         # Get k in Mpc^-1
         k = np.exp(lnk) * self.cosmo.h
 
@@ -627,6 +641,7 @@ class EH_NoBAO(EH_BAO):
         lnt : array_like
             The log of the transfer function at lnk.
         """
+        lnk = Mydouble(lnk)
         k = np.exp(lnk) * self.cosmo.h
 
         ks = k * self.sound_horizon_fit / self.cosmo.h  # need sound horizon in Mpc here
@@ -710,13 +725,13 @@ class BBKS(TransferComponent):
         lnt : array_like
             The log of the transfer function at lnk.
         """
-        a = self.params["a"]
-        b = self.params["b"]
-        c = self.params["c"]
-        d = self.params["d"]
-        e = self.params["e"]
+        a = Mydouble(self.params["a"])
+        b = Mydouble(self.params["b"])
+        c = Mydouble(self.params["c"])
+        d = Mydouble(self.params["d"])
+        e = Mydouble(self.params["e"])
 
-        Gamma = self.cosmo.Om0 * self.cosmo.h
+        Gamma = Mydouble(self.cosmo.Om0) * self.cosmo.h
 
         if self.params["use_sugiyama_baryons"]:
             Gamma *= np.exp(-self.cosmo.Ob0 * (1 + 1 / self.cosmo.Om0))
@@ -778,12 +793,12 @@ class BondEfs(TransferComponent):
             The log of the transfer function at lnk.
         """
 
-        scale = (0.3 * 0.75**2) / (self.cosmo.Om0 * self.cosmo.h)
+        scale = (0.3 * 0.75**2) / (Mydouble(self.cosmo.Om0) * self.cosmo.h)
 
-        a = self.params["a"] * scale
-        b = self.params["b"] * scale
-        c = self.params["c"] * scale
-        nu = self.params["nu"]
+        a = Mydouble(self.params["a"]) * scale
+        b = Mydouble(self.params["b"]) * scale
+        c = Mydouble(self.params["c"]) * scale
+        nu = Mydouble(self.params["nu"])
         k = np.exp(lnk)
         return np.log((1 + (a * k + (b * k) ** 1.5 + (c * k) ** 2) ** nu) ** (-1 / nu))
 

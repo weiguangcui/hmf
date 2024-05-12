@@ -15,7 +15,7 @@ from typing import Union
 from .._internals import _framework
 from ..cosmology import cosmo as csm
 from ..halos import mass_definitions as md
-
+from config import Mydouble
 
 class SimDetails:
     """
@@ -83,16 +83,16 @@ class SimDetails:
         other_cosmo=None,
     ):
         # Possible multi-sims
-        self.L = np.atleast_1d(L)
+        self.L = Mydouble(np.atleast_1d(L))
         self.N = np.atleast_1d(N)
-        self.omegam = np.atleast_1d(omegam)
-        self.sigma_8 = np.atleast_1d(sigma_8)
+        self.omegam = Mydouble(np.atleast_1d(omegam))
+        self.sigma_8 = Mydouble(np.atleast_1d(sigma_8))
         self.transfer = np.atleast_1d(transfer)
-        self.z_start = np.atleast_1d(z_start)
-        self.softening = np.atleast_1d(softening)
+        self.z_start = Mydouble(np.atleast_1d(z_start))
+        self.softening = Mydouble(np.atleast_1d(softening))
         self.ICS = np.atleast_1d(ICS)
 
-        self.z_meas = z_meas
+        self.z_meas = Mydouble(z_meas)
         self.halo_finder_type = halo_finder_type
         self.halo_overdensity = halo_overdensity
         self.halo_finder = halo_finder
@@ -222,21 +222,21 @@ class FittingFunction(_framework.Component):
         self,
         nu2: np.ndarray,
         m: Union[None, np.ndarray] = None,
-        z: float = 0.0,
+        z: Mydouble = 0.0,
         n_eff: Union[None, np.ndarray] = None,
         mass_definition: Union[None, md.MassDefinition] = None,
         cosmo: csm.FLRW = csm.Planck15,
-        delta_c: float = 1.686,
+        delta_c: Mydouble = 1.686,
         **model_parameters,
     ):
         super().__init__(**model_parameters)
 
-        self.nu2 = nu2
-        self.z = z
-        self.n_eff = n_eff
+        self.nu2 = Mydouble(nu2)
+        self.z = Mydouble(z)
+        self.n_eff = Mydouble(n_eff)
         self.mass_definition = mass_definition
-        self.m = m
-        self.delta_c = delta_c
+        self.m = Mydouble(m)
+        self.delta_c = Mydouble(delta_c)
         self.cosmo = cosmo
 
         # Simple Argument validation
@@ -385,12 +385,14 @@ class SMT(FittingFunction):
                 raise ValueError(f"p in SMT must be < 0.5. Got {self.params['p']}")
             if self.params["a"] <= 0:
                 raise ValueError(f"a in SMT must be > 0. Got {self.params['a']}.")
+        self.params["a"] = Mydouble(self.params["a"])
+        self.params["p"] = Mydouble(self.params["p"])
 
     @property
     def fsigma(self):
-        A = self.norm()
-        a = self.params["a"]
-        p = self.params["p"]
+        A = Mydouble(self.norm())
+        a = Mydouble(self.params["a"])
+        p = Mydouble(self.params["p"])
 
         return (
             A
@@ -453,9 +455,9 @@ class Jenkins(FittingFunction):
 
     @property
     def fsigma(self):
-        A = self.params["A"]
-        b = self.params["b"]
-        c = self.params["c"]
+        A = Mydouble(self.params["A"])
+        b = Mydouble(self.params["b"])
+        c = Mydouble(self.params["c"])
         return A * np.exp(-np.abs(self.lnsigma + b) ** c)
 
 
@@ -516,11 +518,11 @@ class Warren(FittingFunction):
 
     @property
     def fsigma(self):
-        A = self.params["A"]
-        b = self.params["b"]
-        c = self.params["c"]
-        d = self.params["d"]
-        e = self.params["e"]
+        A = Mydouble(self.params["A"])
+        b = Mydouble(self.params["b"])
+        c = Mydouble(self.params["c"])
+        d = Mydouble(self.params["d"])
+        e = Mydouble(self.params["e"])
 
         return A * ((e / self.sigma) ** b + c) * np.exp(-d / self.sigma**2)
 
@@ -562,7 +564,7 @@ class Reed03(SMT):
     def fsigma(self):
         vfv = super().fsigma
         return vfv * np.exp(
-            -self.params["c"] / (self.sigma * np.cosh(2.0 * self.sigma) ** 5)
+            Mydouble(-self.params["c"]) / (self.sigma * np.cosh(2.0 * self.sigma) ** 5)
         )
 
     @property
@@ -628,13 +630,14 @@ class Reed07(FittingFunction):
 
     @property
     def fsigma(self):
+        self.lnsigma = Mydouble(self.lnsigma)
         G_1 = np.exp(-((self.lnsigma - 0.4) ** 2) / (2 * 0.6**2))
         G_2 = np.exp(-((self.lnsigma - 0.75) ** 2) / (2 * 0.2**2))
 
-        c = self.params["c"]
-        a = self.params["a"] / self.params["c"]
-        A = self.params["A"]
-        p = self.params["p"]
+        c = Mydouble(self.params["c"])
+        a = Mydouble(self.params["a"]) / self.params["c"]
+        A = Mydouble(self.params["A"])
+        p = Mydouble(self.params["p"])
 
         return (
             A
@@ -666,9 +669,9 @@ class Peacock(FittingFunction):
 
     @property
     def fsigma(self):
-        a = self.params["a"]
-        b = self.params["b"]
-        c = self.params["c"]
+        a = Mydouble(self.params["a"])
+        b = Mydouble(self.params["b"])
+        c = Mydouble(self.params["c"])
 
         d = 1 + a * self.nu**b
         return (
@@ -710,10 +713,10 @@ class Angulo(FittingFunction):
 
     @property
     def fsigma(self):
-        A = self.params["A"]
-        b = self.params["b"]
-        c = self.params["c"]
-        d = self.params["d"]
+        A = Mydouble(self.params["A"])
+        b = Mydouble(self.params["b"])
+        c = Mydouble(self.params["c"])
+        d = Mydouble(self.params["d"])
 
         return A * ((d / self.sigma) ** b + 1) * np.exp(-c / self.sigma**2)
 
@@ -809,10 +812,10 @@ class Watson(FittingFunction):
             )
         else:
             delta_halo = self.mass_definition.halo_overdensity_mean(self.z, self.cosmo)
-        C = np.exp(self.params["C_a"] * (delta_halo / 178 - 1))
-        d = -self.params["d_a"] * self.omegam_z - self.params["d_b"]
-        p = self.params["p"]
-        q = self.params["q"]
+        C = np.exp(Mydouble(self.params["C_a"]) * (delta_halo / 178 - 1))
+        d = Mydouble(-self.params["d_a"]) * self.omegam_z - self.params["d_b"]
+        p = Mydouble(self.params["p"])
+        q = Mydouble(self.params["q"])
 
         return (
             C
@@ -823,17 +826,17 @@ class Watson(FittingFunction):
     @property
     def fsigma(self):
         if self.z == 0:
-            A = self.params["A_0"]
-            alpha = self.params["alpha_0"]
-            beta = self.params["beta_0"]
-            gamma = self.params["gamma_0"]
+            A = Mydouble(self.params["A_0"])
+            alpha = Mydouble(self.params["alpha_0"])
+            beta = Mydouble(self.params["beta_0"])
+            gamma = Mydouble(self.params["gamma_0"])
         elif self.z >= self.params["z_hi"]:
-            A = self.params["A_hi"]
-            alpha = self.params["alpha_hi"]
-            beta = self.params["beta_hi"]
-            gamma = self.params["gamma_hi"]
+            A = Mydouble(self.params["A_hi"])
+            alpha = Mydouble(self.params["alpha_hi"])
+            beta = Mydouble(self.params["beta_hi"])
+            gamma = Mydouble(self.params["gamma_hi"])
         else:
-            omz = self.omegam_z
+            omz = Mydouble(self.omegam_z)
             A = omz * (
                 self.params["A_a"] * (1 + self.z) ** (-self.params["A_b"])
                 + self.params["A_c"]
@@ -846,7 +849,7 @@ class Watson(FittingFunction):
                 self.params["beta_a"] * (1 + self.z) ** (-self.params["beta_b"])
                 + self.params["beta_c"]
             )
-            gamma = self.params["gamma_z"]
+            gamma = Mydouble(self.params["gamma_z"])
 
         return (
             self.gamma()
@@ -898,10 +901,10 @@ class Crocce(Warren):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.params["A"] = self.params["A_a"] * (1 + self.z) ** (-self.params["A_b"])
-        self.params["b"] = self.params["b_a"] * (1 + self.z) ** (-self.params["b_b"])
-        self.params["c"] = self.params["c_a"] * (1 + self.z) ** (-self.params["c_b"])
-        self.params["d"] = self.params["d_a"] * (1 + self.z) ** (-self.params["d_b"])
+        self.params["A"] = Mydouble(self.params["A_a"]) * (1 + self.z) ** (-self.params["A_b"])
+        self.params["b"] = Mydouble(self.params["b_a"]) * (1 + self.z) ** (-self.params["b_b"])
+        self.params["c"] = Mydouble(self.params["c_a"]) * (1 + self.z) ** (-self.params["c_b"])
+        self.params["d"] = Mydouble(self.params["d_a"]) * (1 + self.z) ** (-self.params["d_b"])
 
     @property
     def cutmask(self):
@@ -984,11 +987,11 @@ class Bhattacharya(SMT):
     def __init__(self, **kwargs):
         super().__init__(validate=False, **kwargs)
         if not self.params["normed"]:
-            self.params["A"] = self.params["A_a"] * (1 + self.z) ** -self.params["A_b"]
+            self.params["A"] = Mydouble(self.params["A_a"]) * (1 + self.z) ** -self.params["A_b"]
         else:
             self.params["A"] = self.norm()
 
-        self.params["a"] = self.params["a_a"] * (1 + self.z) ** -self.params["a_b"]
+        self.params["a"] = Mydouble(self.params["a_a"]) * (1 + self.z) ** -self.params["a_b"]
 
         # To enable satisfying normalization to unity
         if self.params["q"] <= 0:
@@ -1020,9 +1023,9 @@ class Bhattacharya(SMT):
 
     def norm(self):
         if self.params["A"] is not None:
-            return self.params["A"]
+            return Mydouble(self.params["A"])
 
-        p, q = self.params["p"], self.params["q"]
+        p, q = Mydouble(self.params["p"]), Mydouble(self.params["q"])
         return (
             2 ** (-1 / 2 - p + q / 2)
             * (2**p * sp.gamma(q / 2) + sp.gamma(-p + q / 2))
@@ -1310,10 +1313,10 @@ class Tinker08(FittingFunction):
             delta_halo = self.mass_definition.halo_overdensity_mean(self.z, self.cosmo)
 
         if delta_halo not in self.delta_virs:
-            A_array = np.array([self.params["A_%s" % d] for d in self.delta_virs])
-            a_array = np.array([self.params["a_%s" % d] for d in self.delta_virs])
-            b_array = np.array([self.params["b_%s" % d] for d in self.delta_virs])
-            c_array = np.array([self.params["c_%s" % d] for d in self.delta_virs])
+            A_array = np.array([self.params["A_%s" % d] for d in self.delta_virs], dtype=Mydouble)
+            a_array = np.array([self.params["a_%s" % d] for d in self.delta_virs], dtype=Mydouble)
+            b_array = np.array([self.params["b_%s" % d] for d in self.delta_virs], dtype=Mydouble)
+            c_array = np.array([self.params["c_%s" % d] for d in self.delta_virs], dtype=Mydouble)
 
             A_func = _spline(self.delta_virs, A_array)
             a_func = _spline(self.delta_virs, a_array)
@@ -1325,10 +1328,10 @@ class Tinker08(FittingFunction):
             b_0 = b_func(delta_halo)
             c_0 = c_func(delta_halo)
         else:
-            A_0 = self.params["A_%s" % (int(delta_halo))]
-            a_0 = self.params["a_%s" % (int(delta_halo))]
-            b_0 = self.params["b_%s" % (int(delta_halo))]
-            c_0 = self.params["c_%s" % (int(delta_halo))]
+            A_0 = Mydouble(self.params["A_%s" % (int(delta_halo))])
+            a_0 = Mydouble(self.params["a_%s" % (int(delta_halo))])
+            b_0 = Mydouble(self.params["b_%s" % (int(delta_halo))])
+            c_0 = Mydouble(self.params["c_%s" % (int(delta_halo))])
 
         self.A = A_0 * (1 + self.z) ** (-self.params["A_exp"])
         self.a = a_0 * (1 + self.z) ** (-self.params["a_exp"])
@@ -1443,12 +1446,12 @@ class Tinker10(FittingFunction):
         self.delta_halo = delta_halo
 
         if int(delta_halo) not in self.delta_virs:
-            beta_array = np.array([self.params["beta_%s" % d] for d in self.delta_virs])
+            beta_array = np.array([self.params["beta_%s" % d] for d in self.delta_virs], dtype=Mydouble)
             gamma_array = np.array(
-                [self.params["gamma_%s" % d] for d in self.delta_virs]
+                [self.params["gamma_%s" % d] for d in self.delta_virs], dtype=Mydouble
             )
-            phi_array = np.array([self.params["phi_%s" % d] for d in self.delta_virs])
-            eta_array = np.array([self.params["eta_%s" % d] for d in self.delta_virs])
+            phi_array = np.array([self.params["phi_%s" % d] for d in self.delta_virs], dtype=Mydouble)
+            eta_array = np.array([self.params["eta_%s" % d] for d in self.delta_virs], dtype=Mydouble)
 
             beta_func = _spline(self.delta_virs, beta_array)
             gamma_func = _spline(self.delta_virs, gamma_array)
@@ -1460,10 +1463,10 @@ class Tinker10(FittingFunction):
             phi_0 = phi_func(delta_halo)
             eta_0 = eta_func(delta_halo)
         else:
-            beta_0 = self.params["beta_%s" % (int(delta_halo))]
-            gamma_0 = self.params["gamma_%s" % (int(delta_halo))]
-            phi_0 = self.params["phi_%s" % (int(delta_halo))]
-            eta_0 = self.params["eta_%s" % (int(delta_halo))]
+            beta_0 = Mydouble(self.params["beta_%s" % (int(delta_halo))])
+            gamma_0 = Mydouble(self.params["gamma_%s" % (int(delta_halo))])
+            phi_0 = Mydouble(self.params["phi_%s" % (int(delta_halo))])
+            eta_0 = Mydouble(self.params["eta_%s" % (int(delta_halo))])
 
         self.beta = (
             beta_0 * (1 + min(self.z, self.params["max_z"])) ** self.params["beta_exp"]
@@ -1586,6 +1589,8 @@ class Behroozi(Tinker10):
     )
 
     def _modify_dndm(self, m, dndm, z, ngtm_tinker):
+        z = Mydouble(z)
+        m = Mydouble(m)
         a = 1 / (1 + z)
         theta = (
             0.144
@@ -1745,10 +1750,10 @@ class Bocquet200mDMOnly(Warren):
     def get_params(self):
         """Get the redshift-dependent parameters."""
         return (
-            self.params["A"] * (1 + self.z) ** self.params["A_z"],
-            self.params["b"] * (1 + self.z) ** self.params["b_z"],
-            self.params["d"] * (1 + self.z) ** self.params["d_z"],
-            self.params["e"] * (1 + self.z) ** self.params["e_z"],
+            Mydouble(self.params["A"]) * (1 + self.z) ** self.params["A_z"],
+            Mydouble(self.params["b"]) * (1 + self.z) ** self.params["b_z"],
+            Mydouble(self.params["d"]) * (1 + self.z) ** self.params["d_z"],
+            Mydouble(self.params["e"]) * (1 + self.z) ** self.params["e_z"],
         )
 
     def convert_mass(self):
