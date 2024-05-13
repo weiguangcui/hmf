@@ -408,7 +408,7 @@ class SMT(FittingFunction):
             return self.params["A"]
 
         p = self.params["p"]
-        return 1.0 / (1 + 2**-p * sp.gamma(0.5 - p) / sp.gamma(0.5))
+        return 1.0 / (1 + 2**-p * sp.gamma(float(0.5 - p)) / sp.gamma(0.5))
 
 
 class ST(SMT):
@@ -1029,7 +1029,7 @@ class Bhattacharya(SMT):
         p, q = Mydouble(self.params["p"]), Mydouble(self.params["q"])
         return (
             2 ** (-1 / 2 - p + q / 2)
-            * (2**p * sp.gamma(q / 2) + sp.gamma(-p + q / 2))
+            * (2**p * sp.gamma(float(q / 2)) + sp.gamma(float(-p + q / 2)))
             / np.sqrt(np.pi)
         )
 
@@ -1520,8 +1520,8 @@ class Tinker10(FittingFunction):
                 * self.beta ** (-2 * self.phi)
                 * self.gamma ** (-0.5 - self.eta)
                 * (
-                    2**self.phi * self.beta ** (2 * self.phi) * sp.gamma(self.eta + 0.5)
-                    + self.gamma**self.phi * sp.gamma(0.5 + self.eta - self.phi)
+                    2**self.phi * self.beta ** (2 * self.phi) * sp.gamma(float(self.eta + 0.5))
+                    + self.gamma**self.phi * sp.gamma(float(0.5 + self.eta - self.phi))
                 )
             )
 
