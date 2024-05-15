@@ -300,7 +300,7 @@ class FittingFunction(_framework.Component):
     @property
     def nu(self):
         """The peak height, sigma/delta_c."""
-        return np.sqrt(self.nu2)
+        return np.sqrt(self.nu2, dtype=Mydouble)
 
     @property
     def sigma(self):
@@ -310,7 +310,7 @@ class FittingFunction(_framework.Component):
     @property
     def lnsigma(self):
         """Negative log of sigma."""
-        return -np.log(self.sigma)
+        return -np.log(self.sigma, dtype=Mydouble)
 
     @property
     def cutmask(self):
@@ -386,8 +386,6 @@ class SMT(FittingFunction):
                 raise ValueError(f"p in SMT must be < 0.5. Got {self.params['p']}")
             if self.params["a"] <= 0:
                 raise ValueError(f"a in SMT must be > 0. Got {self.params['a']}.")
-        self.params["a"] = Mydouble(self.params["a"])
-        self.params["p"] = Mydouble(self.params["p"])
 
     @property
     def fsigma(self):
@@ -631,7 +629,6 @@ class Reed07(FittingFunction):
 
     @property
     def fsigma(self):
-        self.lnsigma = Mydouble(self.lnsigma)
         G_1 = np.exp(-((self.lnsigma - 0.4) ** 2) / (2 * 0.6**2))
         G_2 = np.exp(-((self.lnsigma - 0.75) ** 2) / (2 * 0.2**2))
 
